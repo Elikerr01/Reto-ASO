@@ -1,6 +1,6 @@
 #!/bin/bash
 
-archivo="servidores.txt"
+archivo="Servidores.txt"
 
 añadir_servidor() {
     echo "=== Añadir nuevo servidor ==="
