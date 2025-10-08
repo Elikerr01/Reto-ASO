@@ -1,4 +1,4 @@
-#!/bin/bash
+ #!/bin/bash
 
 # ===============================================
 # Menú principal interactivo con select
@@ -8,38 +8,27 @@
 
 gestion_servidores() {
     echo "=== Gestión de Servidores ==="
-    echo "Aquí podrías listar, agregar o eliminar servidores."
-    # Simulación de acción
-    sleep 1
+    funciones_servidor.sh
 }
 
 monitoreo_sistema() {
     echo "=== Monitoreo del Sistema ==="
-    echo "Mostrando uso de CPU, RAM y espacio en disco..."
-    echo
-    echo "CPU:" $(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')"% usado"
-    echo "RAM:" $(free -m | awk '/Mem:/ {print $3 "MB usados de " $2 "MB"}')
-    echo "Disco:" $(df -h / | awk 'NR==2 {print $5 " usado"}')
-    sleep 2
+    monitoreo.sh
 }
 
 copias_seguridad() {
     echo "=== Copias de Seguridad ==="
-    echo "Ejecutando respaldo simulado..."
-    sleep 1
-    echo "✅ Copia completada."
+    backup.sh
 }
 
 gestion_logs() {
     echo "=== Gestión de Logs ==="
-    echo "Mostrando últimos 5 registros del syslog..."
-    sudo tail -n 5 /var/log/syslog 2>/dev/null || echo "No se puede acceder al syslog."
+    logs.sh
 }
 
 configuracion() {
     echo "=== Configuración del Sistema ==="
-    echo "Aquí podrías editar parámetros del sistema."
-    sleep 1
+    configuracion.conf
 }
 
 salir() {
