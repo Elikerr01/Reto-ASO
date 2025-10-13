@@ -1,144 +1,80 @@
 #!/bin/bash
+ARCHIVO_SERVIDORES="servidores.txt"
 
-ARCHIVO="servidores.txt"
-
-# -------------------------
-# Función: Añadir servidor
-# -------------------------
 añadir_servidor() {
-    read -rp "Nombre del servidor: " nombre
-    read -rp "Dirección IP: " ip
-    read -rp "Puerto SSH: " puerto
+    read -rp "Nombre: " nombre
+    read -rp "IP: " ip
+    read -rp "Puerto: " puerto
     read -rp "Estado (activo/inactivo): " estado
     read -rp "Descripción: " descripcion
-
-    echo "${nombre}#${ip}#${puerto}#${estado}#${descripcion}" >> "$ARCHIVO"
-    echo "Servidor añadido correctamente."
+    echo "$nombre#$ip#$puerto#$estado#$descripcion" >> "$ARCHIVO_SERVIDORES"
+    echo "Servidor añadido."
 }
 
-# -------------------------
-# Función: Listar servidores
-# -------------------------
 listar_servidores() {
-    if [[ ! -s "$ARCHIVO" ]]; then
-        echo "No hay servidores registrados."
-        return
-    fi
-
-    echo -e "Nombre\t\tIP\t\tPuerto\tEstado\tDescripción"
-    echo "-----------------------------------------------------------"
-    while IFS="#" read -r nombre ip puerto estado descripcion; do
-        echo -e "${nombre}\t${ip}\t${puerto}\t${estado}\t${descripcion}"
-    done < "$ARCHIVO"
+    echo "Listado de servidores:"
+    column -t -s "#" "$ARCHIVO_SERVIDORES"
 }
 
-# -------------------------
-# Función: Buscar servidor
-# -------------------------
 buscar_servidor() {
     read -rp "Buscar por (nombre/ip/estado): " campo
-    read -rp "Valor a buscar: " valor
-
-    case $campo in
-        nombre) columna=1 ;;
-        ip) columna=2 ;;
-        estado) columna=4 ;;
-        *) echo "Campo inválido"; return ;;
-    esac
-
-    echo -e "Resultados encontrados:\n"
-    awk -F"#" -v col="$columna" -v val="$valor" 'tolower($col) ~ tolower(val)' "$ARCHIVO" |
-    while IFS="#" read -r nombre ip puerto estado descripcion; do
-        echo -e "${nombre}\t${ip}\t${puerto}\t${estado}\t${descripcion}"
-    done
+    read -rp "Valor: " valor
+    awk -F"#" -v campo="$campo" -v val="$valor" '
+    {
+        if ((campo == "nombre" && tolower($1) ~ tolower(val)) ||
+            (campo == "ip" && tolower($2) ~ tolower(val)) ||
+            (campo == "estado" && tolower($4) ~ tolower(val)))
+            print $0
+    }' "$ARCHIVO_SERVIDORES" | column -t -s "#"
 }
 
-# -------------------------
-# Función: Modificar servidor
-# -------------------------
 modificar_servidor() {
-    read -rp "Nombre del servidor a modificar: " nombre_buscar
-
-    if ! grep -q "^$nombre_buscar#" "$ARCHIVO"; then
+    read -rp "Nombre del servidor a modificar: " nombre
+    if ! grep -q "^$nombre#" "$ARCHIVO_SERVIDORES"; then
         echo "Servidor no encontrado."
         return
     fi
 
     tmpfile=$(mktemp)
-
-    while IFS="#" read -r nombre ip puerto estado descripcion; do
-        if [[ "$nombre" == "$nombre_buscar" ]]; then
-            echo "Modificando $nombre:"
-            read -rp "Nuevo nombre [$nombre]: " nuevo_nombre
-            read -rp "Nueva IP [$ip]: " nueva_ip
-            read -rp "Nuevo puerto [$puerto]: " nuevo_puerto
-            read -rp "Nuevo estado [$estado]: " nuevo_estado
-            read -rp "Nueva descripción [$descripcion]: " nueva_desc
-
-            nombre="${nuevo_nombre:-$nombre}"
-            ip="${nueva_ip:-$ip}"
-            puerto="${nuevo_puerto:-$puerto}"
-            estado="${nuevo_estado:-$estado}"
-            descripcion="${nuevo_desc:-$descripcion}"
+    while IFS="#" read -r n ip puerto estado desc; do
+        if [[ "$n" == "$nombre" ]]; then
+            read -rp "Nuevo nombre [$n]: " new_n
+            read -rp "Nueva IP [$ip]: " new_ip
+            read -rp "Nuevo puerto [$puerto]: " new_puerto
+            read -rp "Nuevo estado [$estado]: " new_estado
+            read -rp "Nueva descripción [$desc]: " new_desc
+            echo "${new_n:-$n}#${new_ip:-$ip}#${new_puerto:-$puerto}#${new_estado:-$estado}#${new_desc:-$desc}" >> "$tmpfile"
+        else
+            echo "$n#$ip#$puerto#$estado#$desc" >> "$tmpfile"
         fi
-        echo "${nombre}#${ip}#${puerto}#${estado}#${descripcion}" >> "$tmpfile"
-    done < "$ARCHIVO"
-
-    mv "$tmpfile" "$ARCHIVO"
-    echo "Servidor modificado correctamente."
+    done < "$ARCHIVO_SERVIDORES"
+    mv "$tmpfile" "$ARCHIVO_SERVIDORES"
+    echo "Servidor modificado."
 }
 
-# -------------------------
-# Función: Eliminar servidor
-# -------------------------
 eliminar_servidor() {
     read -rp "Nombre del servidor a eliminar: " nombre
-
-    if ! grep -q "^$nombre#" "$ARCHIVO"; then
-        echo "Servidor no encontrado."
-        return
-    fi
-
-    grep -v "^$nombre#" "$ARCHIVO" > temp && mv temp "$ARCHIVO"
-    echo "Servidor eliminado correctamente."
+    grep -v "^$nombre#" "$ARCHIVO_SERVIDORES" > tmp && mv tmp "$ARCHIVO_SERVIDORES"
+    echo "Servidor eliminado."
 }
 
-# -------------------------
-# Función: Ordenar servidores alfabéticamente por nombre
-# -------------------------
 ordenar_servidores() {
-    sort -t "#" -k1,1 "$ARCHIVO" -o "$ARCHIVO"
-    echo "Servidores ordenados alfabéticamente."
+    sort -t "#" -k1,1 "$ARCHIVO_SERVIDORES" -o "$ARCHIVO_SERVIDORES"
+    echo "Servidores ordenados por nombre."
 }
 
-# -------------------------
-# Menú principal
-# -------------------------
-menu() {
-    while true; do
-        echo ""
-        echo "=== Gestión de Servidores ==="
-        echo "1) Añadir servidor"
-        echo "2) Listar servidores"
-        echo "3) Buscar servidor"
-        echo "4) Modificar servidor"
-        echo "5) Eliminar servidor"
-        echo "6) Ordenar servidores alfabéticamente"
-        echo "7) Salir"
-        read -rp "Seleccione una opción: " opcion
-
-        case $opcion in
+menu_gestion_servidores() {
+    echo "== Gestión de Servidores =="
+    select op in "Añadir" "Listar" "Buscar" "Modificar" "Eliminar" "Ordenar" "Volver"; do
+        case $REPLY in
             1) añadir_servidor ;;
             2) listar_servidores ;;
             3) buscar_servidor ;;
             4) modificar_servidor ;;
             5) eliminar_servidor ;;
             6) ordenar_servidores ;;
-            7) echo "Saliendo..."; break ;;
-            *) echo "Opción inválida. Intente de nuevo." ;;
+            7) break ;;
+            *) echo "Opción inválida" ;;
         esac
     done
 }
-
-# Iniciar el menú
-menu
