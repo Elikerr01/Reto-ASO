@@ -2,11 +2,30 @@
 
 archivo="Servidores.txt"
 
+# Validar puerto permitido
+validar_puerto() {
+    local puerto=$1
+    if [[ "$puerto" == "8080" || "$puerto" == "2222" || "$puerto" == "3026" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 añadir_servidor() {
     echo "=== Añadir nuevo servidor ==="
     read -p "Nombre del servidor: " nombre
     read -p "IP: " ip
-    read -p "Puerto: " puerto
+    
+    while true; do
+        read -p "Puerto (8080, 2222, 3026): " puerto
+        if validar_puerto "$puerto"; then
+            break
+        else
+            echo "Puerto inválido. Solo se permiten 8080, 2222 o 3026."
+        fi
+    done
+    
     read -p "Estado: " estado
     read -p "Descripción: " descripcion
     echo "$nombre#$ip#$puerto#$estado#$descripcion" >> "$archivo"
@@ -42,12 +61,22 @@ modificar_servidor() {
         return
     fi
     echo "Datos actuales: $linea_antigua"
+    
     read -p "Nuevo nombre: " nuevo_nombre
     read -p "Nueva IP: " nueva_ip
-    read -p "Nuevo puerto: " nuevo_puerto
+    
+    while true; do
+        read -p "Nuevo puerto (8080, 2222, 3026): " nuevo_puerto
+        if validar_puerto "$nuevo_puerto"; then
+            break
+        else
+            echo "Puerto inválido. Solo se permiten 8080, 2222 o 3026."
+        fi
+    done
+    
     read -p "Nuevo estado: " nuevo_estado
     read -p "Nueva descripción: " nueva_desc
-    linea_nueva="$nuevo_nombre#$nueva_ip#$nuevo_puerto#$nuevo_estado#$nuevo_desc"
+    linea_nueva="$nuevo_nombre#$nueva_ip#$nuevo_puerto#$nuevo_estado#$nueva_desc"
     sed -i "s|$linea_antigua|$linea_nueva|" "$archivo"
     echo "Servidor modificado correctamente."
 }
@@ -73,6 +102,27 @@ ordenar_servidores() {
     fi
 }
 
+# Simular ping: verificamos si el puerto está abierto en la IP del servidor
+simular_ping() {
+    echo "=== Simular ping ==="
+    read -p "Nombre del servidor para hacer ping: " nombre
+    linea=$(grep "^$nombre#" "$archivo")
+    if [[ -z "$linea" ]]; then
+        echo "Servidor no encontrado."
+        return
+    fi
+    
+    IFS='#' read -r srv_nombre srv_ip srv_puerto srv_estado srv_desc <<< "$linea"
+    echo "Simulando ping a $srv_nombre ($srv_ip) puerto $srv_puerto..."
+    
+    # Usamos nc (netcat) para verificar conexión al puerto (timeout 3 segundos)
+    if nc -z -w 3 "$srv_ip" "$srv_puerto"; then
+        echo "Ping simulado: ¡Conexión exitosa!"
+    else
+        echo "Ping simulado: No se pudo conectar."
+    fi
+}
+
 mostrar_menu() {
     while true; do
         echo ""
@@ -83,6 +133,7 @@ mostrar_menu() {
         echo "4. Modificar servidor"
         echo "5. Eliminar servidor"
         echo "6. Ordenar servidores"
+        echo "7. Simular ping"
         echo "0. Salir"
         read -p "Seleccione una opción: " opcion
         echo ""
@@ -94,6 +145,7 @@ mostrar_menu() {
             4) modificar_servidor ;;
             5) eliminar_servidor ;;
             6) ordenar_servidores ;;
+            7) simular_ping ;;
             0) echo "Saliendo..."; break ;;
             *) echo "Opción inválida. Intente de nuevo." ;;
         esac
