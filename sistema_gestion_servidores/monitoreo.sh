@@ -1,33 +1,40 @@
 #!/bin/bash
-LOG_ESTADO="estado_servidores.log"
+
+ARCHIVO_SERVIDORES="servidores.txt"
+ARCHIVO_ESTADO="estado_servidores.log"
 
 monitorear_servidores() {
-    echo "Estado de servidores:" > "$LOG_ESTADO"
-    while IFS="#" read -r nombre ip puerto estado desc; do
-        if ping -c 1 -W 1 "$ip" &>/dev/null; then
-            echo "$nombre#$ip#activo" >> "$LOG_ESTADO"
+    > "$ARCHIVO_ESTADO"  # Limpiar archivo de estado
+
+    while IFS= read -r servidor || [[ -n "$servidor" ]]; do
+        if ping -c 1 -W 1 "$servidor" &>/dev/null; then
+            echo "$servidor activo" >> "$ARCHIVO_ESTADO"
         else
-            echo "$nombre#$ip#inactivo" >> "$LOG_ESTADO"
+            echo "$servidor inactivo" >> "$ARCHIVO_ESTADO"
         fi
-    done < servidores.txt
-    echo "Monitoreo completado. Resultados en $LOG_ESTADO"
+    done < "$ARCHIVO_SERVIDORES"
 }
 
 estadisticas_sistema() {
-    total=$(wc -l < "$LOG_ESTADO")
-    activos=$(grep -c "activo" "$LOG_ESTADO")
-    inactivos=$(grep -c "inactivo" "$LOG_ESTADO")
-    porcentaje=$(echo "scale=2; $activos / $total * 100" | bc)
-    echo "Total: $total | Activos: $activos | Inactivos: $inactivos | Disponibilidad: $porcentaje%"
+    echo "Información del sistema:"
+    uname -a
+
+    total=$(wc -l < "$ARCHIVO_ESTADO")
+    activos=$(grep -c "activo" "$ARCHIVO_ESTADO")
+    inactivos=$(grep -c "inactivo" "$ARCHIVO_ESTADO")
+
+    echo "Servidores totales: $total"
+    echo "Servidores activos: $activos"
+    echo "Servidores inactivos: $inactivos"
+
+    if [[ $total -gt 0 ]]; then
+        porcentaje=$(echo "scale=2; ($activos / $total) * 100" | bc)
+        echo "Porcentaje de disponibilidad: $porcentaje %"
+    else
+        echo "No hay servidores para monitorear."
+    fi
 }
 
-menu_monitoreo() {
-    select op in "Monitorear servidores" "Ver estadísticas" "Volver"; do
-        case $REPLY in
-            1) monitorear_servidores ;;
-            2) estadisticas_sistema ;;
-            3) break ;;
-            *) echo "Opción inválida" ;;
-        esac
-    done
-}
+# Ejecutar funciones
+monitorear_servidores
+estadisticas_sistema

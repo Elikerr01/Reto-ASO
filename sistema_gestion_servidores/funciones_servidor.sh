@@ -1,80 +1,103 @@
 #!/bin/bash
-ARCHIVO_SERVIDORES="servidores.txt"
+
+archivo="Servidores.txt"
 
 añadir_servidor() {
-    read -rp "Nombre: " nombre
-    read -rp "IP: " ip
-    read -rp "Puerto: " puerto
-    read -rp "Estado (activo/inactivo): " estado
-    read -rp "Descripción: " descripcion
-    echo "$nombre#$ip#$puerto#$estado#$descripcion" >> "$ARCHIVO_SERVIDORES"
-    echo "Servidor añadido."
+    echo "=== Añadir nuevo servidor ==="
+    read -p "Nombre del servidor: " nombre
+    read -p "IP: " ip
+    read -p "Puerto: " puerto
+    read -p "Estado: " estado
+    read -p "Descripción: " descripcion
+    echo "$nombre#$ip#$puerto#$estado#$descripcion" >> "$archivo"
+    echo "Servidor añadido correctamente."
 }
 
 listar_servidores() {
-    echo "Listado de servidores:"
-    column -t -s "#" "$ARCHIVO_SERVIDORES"
+    echo "=== Lista de servidores ==="
+    if [[ -f "$archivo" ]]; then
+        cat "$archivo"
+    else
+        echo "No hay servidores registrados."
+    fi
 }
 
 buscar_servidor() {
-    read -rp "Buscar por (nombre/ip/estado): " campo
-    read -rp "Valor: " valor
-    awk -F"#" -v campo="$campo" -v val="$valor" '
-    {
-        if ((campo == "nombre" && tolower($1) ~ tolower(val)) ||
-            (campo == "ip" && tolower($2) ~ tolower(val)) ||
-            (campo == "estado" && tolower($4) ~ tolower(val)))
-            print $0
-    }' "$ARCHIVO_SERVIDORES" | column -t -s "#"
+    echo "=== Buscar servidor ==="
+    read -p "Buscar por (nombre/IP/estado): " termino
+    resultado=$(grep -i "$termino" "$archivo")
+    if [[ -z "$resultado" ]]; then
+        echo "No se encontraron coincidencias."
+    else
+        echo "$resultado"
+    fi
 }
 
 modificar_servidor() {
-    read -rp "Nombre del servidor a modificar: " nombre
-    if ! grep -q "^$nombre#" "$ARCHIVO_SERVIDORES"; then
+    echo "=== Modificar servidor ==="
+    read -p "Nombre del servidor a modificar: " nombre
+    linea_antigua=$(grep "^$nombre#" "$archivo")
+    if [[ -z "$linea_antigua" ]]; then
         echo "Servidor no encontrado."
         return
     fi
-
-    tmpfile=$(mktemp)
-    while IFS="#" read -r n ip puerto estado desc; do
-        if [[ "$n" == "$nombre" ]]; then
-            read -rp "Nuevo nombre [$n]: " new_n
-            read -rp "Nueva IP [$ip]: " new_ip
-            read -rp "Nuevo puerto [$puerto]: " new_puerto
-            read -rp "Nuevo estado [$estado]: " new_estado
-            read -rp "Nueva descripción [$desc]: " new_desc
-            echo "${new_n:-$n}#${new_ip:-$ip}#${new_puerto:-$puerto}#${new_estado:-$estado}#${new_desc:-$desc}" >> "$tmpfile"
-        else
-            echo "$n#$ip#$puerto#$estado#$desc" >> "$tmpfile"
-        fi
-    done < "$ARCHIVO_SERVIDORES"
-    mv "$tmpfile" "$ARCHIVO_SERVIDORES"
-    echo "Servidor modificado."
+    echo "Datos actuales: $linea_antigua"
+    read -p "Nuevo nombre: " nuevo_nombre
+    read -p "Nueva IP: " nueva_ip
+    read -p "Nuevo puerto: " nuevo_puerto
+    read -p "Nuevo estado: " nuevo_estado
+    read -p "Nueva descripción: " nueva_desc
+    linea_nueva="$nuevo_nombre#$nueva_ip#$nuevo_puerto#$nuevo_estado#$nuevo_desc"
+    sed -i "s|$linea_antigua|$linea_nueva|" "$archivo"
+    echo "Servidor modificado correctamente."
 }
 
 eliminar_servidor() {
-    read -rp "Nombre del servidor a eliminar: " nombre
-    grep -v "^$nombre#" "$ARCHIVO_SERVIDORES" > tmp && mv tmp "$ARCHIVO_SERVIDORES"
-    echo "Servidor eliminado."
+    echo "=== Eliminar servidor ==="
+    read -p "Nombre del servidor a eliminar: " nombre
+    if grep -q "^$nombre#" "$archivo"; then
+        sed -i "/^$nombre#/d" "$archivo"
+        echo "Servidor eliminado correctamente."
+    else
+        echo "Servidor no encontrado."
+    fi
 }
 
 ordenar_servidores() {
-    sort -t "#" -k1,1 "$ARCHIVO_SERVIDORES" -o "$ARCHIVO_SERVIDORES"
-    echo "Servidores ordenados por nombre."
+    echo "=== Ordenar servidores alfabéticamente ==="
+    if [[ -f "$archivo" ]]; then
+        sort "$archivo" -o "$archivo"
+        echo "Servidores ordenados correctamente."
+    else
+        echo "No hay servidores para ordenar."
+    fi
 }
 
-menu_gestion_servidores() {
-    echo "== Gestión de Servidores =="
-    select op in "Añadir" "Listar" "Buscar" "Modificar" "Eliminar" "Ordenar" "Volver"; do
-        case $REPLY in
+mostrar_menu() {
+    while true; do
+        echo ""
+        echo "===== Gestión de Servidores ====="
+        echo "1. Añadir servidor"
+        echo "2. Listar servidores"
+        echo "3. Buscar servidor"
+        echo "4. Modificar servidor"
+        echo "5. Eliminar servidor"
+        echo "6. Ordenar servidores"
+        echo "0. Salir"
+        read -p "Seleccione una opción: " opcion
+        echo ""
+
+        case $opcion in
             1) añadir_servidor ;;
             2) listar_servidores ;;
             3) buscar_servidor ;;
             4) modificar_servidor ;;
             5) eliminar_servidor ;;
             6) ordenar_servidores ;;
-            7) break ;;
-            *) echo "Opción inválida" ;;
+            0) echo "Saliendo..."; break ;;
+            *) echo "Opción inválida. Intente de nuevo." ;;
         esac
     done
 }
+
+mostrar_menu
