@@ -1,51 +1,26 @@
 #!/bin/bash
-
-source configuracion.conf
+LOG_SISTEMA="/var/log/syslog"  # Cambia si usas otro sistema
 
 ver_logs() {
-    echo "Logs disponibles:"
-    ls -1 *.log 2>/dev/null
-    read -rp "Ingrese el nombre del log a visualizar: " log_file
+    read -rp "Filtrar por fecha (opcional): " fecha
+    read -rp "Filtrar por tipo (ERROR, INFO, etc.): " tipo
 
-    if [ ! -f "$log_file" ]; then
-        echo "Archivo de log no encontrado."
-        return
+    if [[ -n "$fecha" || -n "$tipo" ]]; then
+        grep "$fecha" "$LOG_SISTEMA" | grep -i "$tipo"
+    else
+        tail -n 50 "$LOG_SISTEMA"
     fi
 
-    echo "Opciones de filtro:"
-    echo "1) Mostrar todo"
-    echo "2) Filtrar por fecha (YYYY-MM-DD)"
-    echo "3) Filtrar por tipo (error, warning, info)"
-    read -rp "Seleccione opción: " opcion
-
-    case $opcion in
-        1)
-            cat "$log_file"
-            ;;
-        2)
-            read -rp "Ingrese fecha (YYYY-MM-DD): " fecha
-            grep "$fecha" "$log_file"
-            ;;
-        3)
-            read -rp "Ingrese tipo (error/warning/info): " tipo
-            grep -i "$tipo" "$log_file"
-            ;;
-        *)
-            echo "Opción inválida."
-            ;;
-    esac
-
-    echo ""
-    echo "Número de líneas que contienen 'error':"
-    grep -ic "error" "$log_file"
+    echo "Líneas con 'error':"
+    grep -ic "error" "$LOG_SISTEMA"
 }
 
 limpiar_logs() {
-    echo "Archivando logs antiguos (más de 30 días)..."
-    find . -name "*.log" -type f -mtime +30 -exec gzip {} \;
+    mkdir -p logs_archivados
+    find /var/log -name "*.log" -size +0 -mtime +7 -exec mv {} logs_archivados/ \;
+    find /var/log -name "*.log" -size 0 -delete
+    echo "Logs antiguos archivados y logs vacíos eliminados."
+}
 
-    echo "Eliminando logs vacíos..."
-    find . -name "*.log" -type f -empty -delete
-
-    echo "Limpieza de logs completada."
-
+menu_logs() {
+    select op
