@@ -1,60 +1,26 @@
- #!/bin/bash
+#!/bin/bash
 
-# ===============================================
-# Menú principal interactivo con select
-# ===============================================
+# Cargar configuración
+source configuracion.conf
+source funciones_servidor.sh
+source monitoreo.sh
+source backup.sh
+source logs.sh
 
-# -------- Funciones del menú --------
+clear
+echo "=== Sistema de Gestión de Servidores ==="
 
-gestion_servidores() {
-    echo "=== Gestión de Servidores ==="
-    ./funciones_servidor.sh
-}
+PS3="Seleccione una opción: "
+options=("Gestión de servidores" "Monitoreo del sistema" "Copias de seguridad" "Gestión de logs" "Configuración" "Salir")
 
-monitoreo_sistema() {
-    echo "=== Monitoreo del Sistema ==="
-    ./monitoreo.sh
-}
-
-copias_seguridad() {
-    echo "=== Copias de Seguridad ==="
-    ./backup.sh
-}
-
-gestion_logs() {
-    echo "=== Gestión de Logs ==="
-    ./logs.sh
-}
-
-configuracion() {
-    echo "=== Configuración del Sistema ==="
-    ./configuracion.conf
-}
-
-salir() {
-    echo "Saliendo del programa..."
-    exit 0
-}
-
-# -------- Menú principal --------
-
-while true; do
-    echo
-    echo "===== MENÚ PRINCIPAL ====="
-    PS3="Seleccione una opción (1-6): "
-
-    options=("Gestión de servidores" "Monitoreo del sistema" "Copias de seguridad" "Gestión de logs" "Configuración" "Salir")
-
-    select opt in "${options[@]}"; do
-        case $REPLY in
-            1) gestion_servidores; break ;;
-            2) monitoreo_sistema; break ;;
-            3) copias_seguridad; break ;;
-            4) gestion_logs; break ;;
-            5) configuracion; break ;;
-            6) salir ;;
-            *) echo "❌ Opción inválida. Intente de nuevo."; break ;;
-        esac
-    done
+select opt in "${options[@]}"; do
+    case $REPLY in
+        1) menu_gestion_servidores ;;
+        2) menu_monitoreo ;;
+        3) menu_backup ;;
+        4) menu_logs ;;
+        5) nano configuracion.conf ;;
+        6) echo "Saliendo..."; exit ;;
+        *) echo "Opción inválida. Intente nuevamente." ;;
+    esac
 done
-
