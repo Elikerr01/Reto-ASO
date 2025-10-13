@@ -1,6 +1,6 @@
 #!/bin/bash
 
-archivo="Servidores.txt"
+archivo="servidores.txt"
 
 # Validar puerto permitido
 validar_puerto() {
