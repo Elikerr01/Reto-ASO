@@ -1,13 +1,102 @@
 #!/bin/bash
+#
+# funciones_servidor.sh
+# Funciones para gestión de servidores:
+# añadir, listar, buscar, modificar, eliminar, ordenar
+# Incluye simulación de servidor con nc (netcat) para puertos permitidos.
+#
 
-ARCHIVO="servidores.txt"  # Archivo donde se guardan los datos de los servidores
+# Cargar la configuración global (debe definir ARCHIVO_SERVIDORES, etc.)
+# Asegúrate de que configuracion.conf está en el mismo directorio o ajusta la ruta.
+source configuracion.conf
 
-# Añadir nuevo servidor
+# Directorio donde guardamos PIDs de simulaciones locales
+SIMULADOS_DIR="simulados"
+mkdir -p "$SIMULADOS_DIR"
+
+# ===== Funciones de manejo de simulación con nc =====
+
+# start_simulado nombre ip puerto
+# Inicia un listener nc en background y guarda su PID en simulados/<nombre>.pid
+start_simulado() {
+    local nombre="$1"
+    local ip="$2"
+    local puerto="$3"
+
+    # Solo simulamos si la IP es localhost (evitar abrir puertos en red real)
+    if [[ "$ip" != "127.0.0.1" && "$ip" != "localhost" ]]; then
+        echo "IP $ip no es localhost: no se inicia simulación para $nombre:$puerto"
+        return
+    fi
+
+    # Comprobar que el puerto es uno de los permitidos
+    if [[ "$puerto" != "8080" && "$puerto" != "2222" && "$puerto" != "3306" ]]; then
+        echo "Puerto $puerto no permitido para simulación."
+        return
+    fi
+
+    # Si ya hay un proceso para este nombre, no arrancar otro
+    local pidfile="$SIMULADOS_DIR/${nombre}.pid"
+    if [ -f "$pidfile" ]; then
+        local oldpid
+        oldpid=$(cat "$pidfile")
+        if [ -n "$oldpid" ] && kill -0 "$oldpid" 2>/dev/null; then
+            echo "Simulación ya corriendo para $nombre (PID $oldpid)."
+            return
+        else
+            # PID stale — removemos
+            rm -f "$pidfile"
+        fi
+    fi
+
+    # Comprobar si puerto está libre (nc -z probará)
+    if nc -z localhost "$puerto" >/dev/null 2>&1; then
+        echo "Puerto $puerto ya ocupado: no se inicia simulador para $nombre."
+        return
+    fi
+
+    # Lanzar nc en modo listen persistente.
+    # Nota: sintaxis -lk funciona en muchas versiones (GNU netcat, ncat). Si falla, deberá ajustarse.
+    # Redirigimos salida a /dev/null y lo ejecutamos en background.
+    nc -lk "$puerto" >/dev/null 2>&1 &
+    local pid=$!
+
+    # Guardar PID
+    echo "$pid" > "$pidfile"
+    echo "Simulación iniciada para $nombre en localhost:$puerto (PID $pid)."
+}
+
+# stop_simulado nombre
+# Detiene el listener asociado (si existe)
+stop_simulado() {
+    local nombre="$1"
+    local pidfile="$SIMULADOS_DIR/${nombre}.pid"
+
+    if [ ! -f "$pidfile" ]; then
+        # Nada que hacer
+        return
+    fi
+
+    local pid
+    pid=$(cat "$pidfile")
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" && echo "Simulación para $nombre (PID $pid) detenida."
+    else
+        echo "PID $pid para $nombre no existe; limpiando archivo PID."
+    fi
+
+    rm -f "$pidfile"
+}
+
+# ===== Funciones de gestión de servidores (archivo: ARCHIVO_SERVIDORES) =====
+
+# Añadir nuevo servidor con validación y simulación si corresponde
 añadir_servidor() {
+    # Pedimos datos al usuario
     read -rp "Nombre servidor: " nombre
     read -rp "IP: " ip
-    
-    # Solicitar puerto y validar que sea uno de los permitidos
+
+    # Validar puerto permitido
     while true; do
         read -rp "Puerto (solo 8080, 2222 o 3306): " puerto
         if [[ "$puerto" == "8080" || "$puerto" == "2222" || "$puerto" == "3306" ]]; then
@@ -20,35 +109,32 @@ añadir_servidor() {
     read -rp "Estado (activo/inactivo): " estado
     read -rp "Descripción: " descripcion
 
-    # Guardar la información del servidor en el archivo, separando campos con #
-    echo "${nombre}#${ip}#${puerto}#${estado}#${descripcion}" >> "$ARCHIVO"
-    echo "Servidor añadido correctamente."
+    # Guardar la entrada en el archivo (formato: nombre#ip#puerto#estado#descripcion)
+    echo "${nombre}#${ip}#${puerto}#${estado}#${descripcion}" >> "$ARCHIVO_SERVIDORES"
+    echo "Servidor añadido correctamente a $ARCHIVO_SERVIDORES."
+
+    # Intentar iniciar simulación si la IP es local
+    start_simulado "$nombre" "$ip" "$puerto"
 }
 
-# Listar todos los servidores almacenados
+# Listar todos los servidores registrados en el archivo
 listar_servidores() {
-    # Comprobar si el archivo está vacío o no existe
-    if [ ! -s "$ARCHIVO" ]; then
+    if [ ! -s "$ARCHIVO_SERVIDORES" ]; then
         echo "No hay servidores registrados."
         return
     fi
 
-    echo "Listado de servidores:"
-    echo "Nombre\tIP\tPuerto\tEstado\tDescripción"
-    
-    # Leer línea por línea, separando por #
+    echo -e "Nombre\tIP\tPuerto\tEstado\tDescripción"
     while IFS="#" read -r nombre ip puerto estado descripcion; do
-        # Mostrar los datos con tabulaciones para mejor formato
+        # Mostramos cada registro con formato de columnas (tabs)
         echo -e "${nombre}\t${ip}\t${puerto}\t${estado}\t${descripcion}"
-    done < "$ARCHIVO"
+    done < "$ARCHIVO_SERVIDORES"
 }
 
-# Buscar servidor por nombre, IP o estado
+# Buscar servidores por nombre, ip o estado
 buscar_servidor() {
     read -rp "Buscar por (nombre/ip/estado): " campo
-    campo=$(echo "$campo" | tr '[:upper:]' '[:lower:]')  # Convertir a minúsculas para evitar errores
-    
-    # Validar campo de búsqueda
+    campo=$(echo "$campo" | tr '[:upper:]' '[:lower:]')
     if [[ "$campo" != "nombre" && "$campo" != "ip" && "$campo" != "estado" ]]; then
         echo "Campo inválido."
         return
@@ -56,7 +142,6 @@ buscar_servidor() {
 
     read -rp "Valor a buscar: " valor
 
-    # Determinar la columna del campo para la búsqueda
     case $campo in
         nombre) columna=1 ;;
         ip) columna=2 ;;
@@ -64,8 +149,8 @@ buscar_servidor() {
     esac
 
     echo "Resultados de la búsqueda:"
-    # Buscar en el archivo ignorando mayúsculas/minúsculas y mostrar coincidencias
-    grep -i "^" "$ARCHIVO" | awk -F"#" -v col="$columna" -v val="$valor" 'tolower($col) ~ tolower(val) {print $0}' | \
+    # awk hace la búsqueda insensible a mayúsculas/minúsculas
+    awk -F"#" -v col="$columna" -v val="$valor" 'tolower($col) ~ tolower(val) {print $0}' "$ARCHIVO_SERVIDORES" | \
     while IFS="#" read -r nombre ip puerto estado descripcion; do
         echo -e "${nombre}\t${ip}\t${puerto}\t${estado}\t${descripcion}"
     done
@@ -75,24 +160,30 @@ buscar_servidor() {
 modificar_servidor() {
     read -rp "Ingrese el nombre del servidor a modificar: " nombre_buscar
 
-    # Verificar si el servidor existe
-    if ! grep -iq "^${nombre_buscar}#" "$ARCHIVO"; then
+    # Verificar existencia
+    if ! grep -iq "^${nombre_buscar}#" "$ARCHIVO_SERVIDORES"; then
         echo "Servidor no encontrado."
         return
     fi
 
-    tmpfile=$(mktemp)  # Archivo temporal para modificaciones
+    tmpfile=$(mktemp)
 
+    # Recorremos línea a línea
     while IFS="#" read -r nombre ip puerto estado descripcion; do
         if [[ "$nombre" == "$nombre_buscar" ]]; then
             echo "Modificando servidor: $nombre"
+
+            # Guardamos valores antiguos para gestionar la simulación
+            old_nombre="$nombre"
+            old_ip="$ip"
+            old_puerto="$puerto"
+
             read -rp "Nuevo nombre [$nombre]: " nuevo_nombre
             read -rp "Nueva IP [$ip]: " nueva_ip
 
-            # Validar puerto nuevo, si se introduce uno nuevo
+            # Validar puerto nuevo o mantener el anterior
             while true; do
                 read -rp "Nuevo puerto [$puerto] (solo 8080, 2222 o 3306): " nuevo_puerto
-                # Si no se escribe nada, mantiene el anterior
                 if [[ -z "$nuevo_puerto" ]]; then
                     nuevo_puerto=$puerto
                     break
@@ -106,77 +197,51 @@ modificar_servidor() {
             read -rp "Nuevo estado [$estado]: " nuevo_estado
             read -rp "Nueva descripción [$descripcion]: " nueva_desc
 
-            # Asignar los valores nuevos o los antiguos si no se modificaron
+            # Si el nombre cambia, generamos nuevo nombre, etc.
             nombre="${nuevo_nombre:-$nombre}"
             ip="${nueva_ip:-$ip}"
             puerto="$nuevo_puerto"
             estado="${nuevo_estado:-$estado}"
             descripcion="${nueva_desc:-$descripcion}"
 
-            # Escribir la línea modificada en el archivo temporal
+            # Detener simulación previa (si existía)
+            stop_simulado "$old_nombre"
+
+            # Escribir línea modificada en el temporal
             echo "${nombre}#${ip}#${puerto}#${estado}#${descripcion}" >> "$tmpfile"
+
+            # Iniciar simulación para los nuevos datos si procede
+            start_simulado "$nombre" "$ip" "$puerto"
         else
-            # Copiar las líneas que no se modifican tal cual
+            # Copiar línea sin modificar
             echo "${nombre}#${ip}#${puerto}#${estado}#${descripcion}" >> "$tmpfile"
         fi
-    done < "$ARCHIVO"
+    done < "$ARCHIVO_SERVIDORES"
 
-    mv "$tmpfile" "$ARCHIVO"  # Reemplazar el archivo original con el modificado
+    # Reemplazar el archivo original
+    mv "$tmpfile" "$ARCHIVO_SERVIDORES"
     echo "Modificación completada."
 }
 
-# Eliminar servidor por nombre
+# Eliminar servidor por nombre (y detener simulación si existía)
 eliminar_servidor() {
     read -rp "Ingrese el nombre del servidor a eliminar: " nombre_eliminar
 
-    # Verificar si el servidor existe
-    if ! grep -iq "^${nombre_eliminar}#" "$ARCHIVO"; then
+    if ! grep -iq "^${nombre_eliminar}#" "$ARCHIVO_SERVIDORES"; then
         echo "Servidor no encontrado."
         return
     fi
 
-    # Filtrar y eliminar la línea que coincide con el nombre
-    grep -iv "^${nombre_eliminar}#" "$ARCHIVO" > servidores.tmp && mv servidores.tmp "$ARCHIVO"
+    # Detener simulación (si existe)
+    stop_simulado "$nombre_eliminar"
+
+    # Eliminar la línea del archivo (insensible a mayúsculas)
+    grep -iv "^${nombre_eliminar}#" "$ARCHIVO_SERVIDORES" > servidores.tmp && mv servidores.tmp "$ARCHIVO_SERVIDORES"
     echo "Servidor eliminado."
 }
 
 # Ordenar servidores alfabéticamente por nombre
 ordenar_servidores() {
-    sort -t "#" -k1,1 "$ARCHIVO" -o "$ARCHIVO"
+    sort -t "#" -k1,1 "$ARCHIVO_SERVIDORES" -o "$ARCHIVO_SERVIDORES"
     echo "Archivo ordenado alfabéticamente por nombre."
 }
-
-# Menú interactivo para usar las funciones
-menu() {
-    while true; do
-        echo ""
-        echo "Gestión de Servidores"
-        echo "1) Añadir servidor"
-        echo "2) Listar servidores"
-        echo "3) Buscar servidor"
-        echo "4) Modificar servidor"
-        echo "5) Eliminar servidor"
-        echo "6) Ordenar servidores"
-        echo "7) Salir"
-        read -rp "Elige una opción: " opcion
-
-        case $opcion in
-            1) añadir_servidor ;;
-            2) listar_servidores ;;
-            3) buscar_servidor ;;
-            4) modificar_servidor ;;
-            5) eliminar_servidor ;;
-            6) ordenar_servidores ;;
-            7) echo "Saliendo..."; break ;;
-            *) echo "Opción inválida." ;;
-        esac
-    done
-}
-
-# Ejecutar el menú principal
-menu
-
-}
-
-# Ejecutar menú
-menu
