@@ -8,27 +8,27 @@
 
 gestion_servidores() {
     echo "=== Gestión de Servidores ==="
-    funciones_servidor.sh
+    ./funciones_servidor.sh
 }
 
 monitoreo_sistema() {
     echo "=== Monitoreo del Sistema ==="
-    monitoreo.sh
+    ./monitoreo.sh
 }
 
 copias_seguridad() {
     echo "=== Copias de Seguridad ==="
-    backup.sh
+    ./backup.sh
 }
 
 gestion_logs() {
     echo "=== Gestión de Logs ==="
-    logs.sh
+    ./logs.sh
 }
 
 configuracion() {
     echo "=== Configuración del Sistema ==="
-    configuracion.conf
+    ./configuracion.conf
 }
 
 salir() {
