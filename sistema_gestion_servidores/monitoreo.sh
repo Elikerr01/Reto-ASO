@@ -45,5 +45,5 @@ estadisticas_sistema() {
 }
 
 # Ejecutar funciones
-monitorear_servidores
+simular_ping
 estadisticas_sistema
