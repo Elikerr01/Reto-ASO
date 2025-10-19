@@ -138,7 +138,6 @@ mostrar_menu() {
         echo "4. Modificar servidor"
         echo "5. Eliminar servidor"
         echo "6. Ordenar servidores"
-        echo "7. Simular ping"
         echo "0. Salir"
         read -p "Seleccione una opción: " opcion
         echo ""
@@ -150,7 +149,6 @@ mostrar_menu() {
             4) modificar_servidor ;;
             5) eliminar_servidor ;;
             6) ordenar_servidores ;;
-            7) simular_ping ;;
             0) echo "Saliendo..."; break ;;
             *) echo "Opción inválida. Intente de nuevo." ;;
         esac
