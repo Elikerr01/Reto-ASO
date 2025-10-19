@@ -92,7 +92,15 @@ modificar_servidor() {
         fi
     done
     
-    read -p "Nuevo estado: " nuevo_estado
+    while true; do
+    read -p "Estado (activo, inactivo): " estado
+        if validar_estado "$estado"; then
+            break
+        else
+            echo "Estado inválido. Solo se permiten activo o inactivo."
+        fi
+	done
+	
     read -p "Nueva descripción: " nueva_desc
     linea_nueva="$nuevo_nombre#$nueva_ip#$nuevo_puerto#$nuevo_estado#$nueva_desc"
     sed -i "s|$linea_antigua|$linea_nueva|" "$archivo"
