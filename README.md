@@ -16,4 +16,32 @@ Tercer paso: Ejecutar el sistema desde la terminal.
 
 ## Menú Principal Interactivo
 
-Es la parte principal del proyecto, que gracias a el nos podremos mover sobre los otros scripts
+Archivo principal que muestra un menú interactivo usando select. Permite navegar por todas las funcionalidades del sistema, en este caso:
+
+-Gestión de servidores
+
+-Monitoreo del sistema
+
+-Copias de seguridad
+
+-Gestión de logs
+
+-Configuración
+
+-Salir
+
+## Funciones_servidor.sh
+
+En este script podremos gestionar los servidores que tenemos, las funciones principales que tiene son:
+
+-añadir_servidor(): Añade un nuevo servidor.
+
+-listar_servidores(): Muestra todos los servidores.
+
+-buscar_servidor(): Busca servidores por nombre, IP o estado.
+
+-modificar_servidor(): Edita la información de un servidor.
+
+-eliminar_servidor(): Borra un servidor de la lista.
+
+-ordenar_servidores(): Ordena los servidores alfabéticamente.
