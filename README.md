@@ -45,3 +45,23 @@ En este script podremos gestionar los servidores que tenemos, las funciones prin
 -eliminar_servidor(): Borra un servidor de la lista.
 
 -ordenar_servidores(): Ordena los servidores alfabéticamente.
+
+## Monitoreo.sh
+
+Con este script podemos monitorear los servidores y el sistema, las funciones principales que tiene son:
+
+-monitorear_servidores(): Verifica la conectividad del servidor que le hemos dado usando un ping y genera un informe de estado (activo/inactivo).
+-estadisticas_sistema(): Muestra información del sistema local, cuenta servidores activos y inactivos y calcula el porcentaje de disponibilidad.
+
+## backup.sh
+
+Sistema de copias de seguridad de la configuración y datos del sistema, sus funciones son:
+
+crear_backup(): Crea un directorio de backup con fecha, copia archivos de configuración y los comprime en .tar.gz. Y genera un log del backup.
+
+restaurar_backup(): Lista los backups disponibles y permite seleccionar y restaurar un backup.
+
+## configuracion.conf
+
+Archivo de configuración donde se definen parámetros generales del sistema, como rutas de archivos, formatos de logs y ajustes de backup.
+
