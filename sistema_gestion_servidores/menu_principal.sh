@@ -28,7 +28,7 @@ gestion_logs() {
 
 configuracion() {
     echo "=== Configuración del Sistema ==="
-    ./configuracion.conf
+    cat configuracion.conf
 }
 
 salir() {
