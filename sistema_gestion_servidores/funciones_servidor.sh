@@ -26,7 +26,15 @@ añadir_servidor() {
         fi
     done
     
-    read -p "Estado: " estado
+    while true; do
+    read -p "Estado (activo, inactivo): " estado
+        if validar_estado "$estado"; then
+            break
+        else
+            echo "Estado inválido. Solo se permiten activo o inactivo."
+        fi
+	done
+    
     read -p "Descripción: " descripcion
     echo "$nombre#$ip#$puerto#$estado#$descripcion" >> "$archivo"
     echo "Servidor añadido correctamente."
