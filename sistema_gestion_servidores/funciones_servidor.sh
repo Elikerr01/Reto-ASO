@@ -12,6 +12,16 @@ validar_puerto() {
     fi
 }
 
+# Validar estado permitido
+validar_estado() {
+    local estado=$1
+    if [[ "$estado" == "activo" || "$estado" == "inactivo" ]]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 añadir_servidor() {
     echo "=== Añadir nuevo servidor ==="
     read -p "Nombre del servidor: " nombre
