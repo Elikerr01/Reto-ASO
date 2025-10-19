@@ -46,10 +46,12 @@ estadisticas_sistema() {
     if [[ $total -gt 0 ]]; then
         porcentaje=$(echo "scale=2; ($activos / $total) * 100" | bc)
         echo "Porcentaje de disponibilidad: $porcentaje %"
+        echo Totales:"$total" Activos:"$activos" Inactivos:"$inactivos" > estado_servidores.log
     else
         echo "No hay servidores para monitorear."
     fi
 }
+
 
 # Ejecutar funciones
 simular_ping
