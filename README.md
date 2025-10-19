@@ -4,6 +4,13 @@ El proyecto consiste en crear un Sistema de Gestión de Servidores completo en S
 
 # -- Instrucciones de instalación y uso --
 
+## Pasos a seguir:
+
+Primer paso: Clonar el repositorio o descargar los archivos en un directorio local.
+
+Segundo paso: Dar permisos de ejecución a los scripts principales.
+
+Tercer paso: Ejecutar el sistema desde la terminal.
 
 # -- Explicación de cada módulo --
 
