@@ -93,8 +93,8 @@ modificar_servidor() {
     done
     
     while true; do
-    read -p "Estado (activo, inactivo): " estado
-        if validar_estado "$estado"; then
+    read -p "Estado (activo, inactivo): " nuevo_estado
+        if validar_estado "$nuevo_estado"; then
             break
         else
             echo "Estado inválido. Solo se permiten activo o inactivo."
