@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ARCHIVO_SERVIDORES="servidores.txt"
-ARCHIVO_ESTADO="estado_servidores.log"
+ARCHIVO_ESTADO="servidores.txt"
 
 # Simular ping: verificamos si el puerto está abierto en la IP del servidor
 simular_ping() {
