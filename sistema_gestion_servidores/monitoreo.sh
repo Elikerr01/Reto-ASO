@@ -6,8 +6,15 @@ ARCHIVO_ESTADO="estado_servidores.log"
 # Simular ping: verificamos si el puerto está abierto en la IP del servidor
 simular_ping() {
     echo "=== Simular ping ==="
+    
+    # Verificamos que el archivo exista
+    if [[ ! -f "$ARCHIVO_SERVIDORES" ]]; then
+        echo "Error: No se encontró el archivo $ARCHIVO_SERVIDORES"
+        return 1
+    fi
+    
     read -p "Nombre del servidor para hacer ping: " nombre
-    linea=$(grep "^$nombre#" "$archivo")
+    linea=$(grep "^$nombre#" "$ARCHIVO_SERVIDORES")
     if [[ -z "$linea" ]]; then
         echo "Servidor no encontrado."
         return
