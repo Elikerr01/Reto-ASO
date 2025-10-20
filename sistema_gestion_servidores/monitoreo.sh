@@ -78,7 +78,7 @@ estadisticas_sistema() {
         echo "Porcentaje de disponibilidad: $porcentaje %"
 
         # Guarda los resultados en un archivo de log
-        echo Totales:"$total" Activos:"$activos" Inactivos:"$inactivos" > estado_servidores.log
+        echo Totales:"$total" Activos:"$activos" Inactivos:"$inactivos" >> estado_servidores.log
     else
         echo "No hay servidores para monitorear."
     fi
